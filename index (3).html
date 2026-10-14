@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Droit ou en rond ? Le jeu des trajectoires</title>
+<link href="https://fonts.googleapis.com/css2?family=Caveat+Brush&family=Nunito:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--desk:#e6ebf6;--paper:#fffffe;--ink:#1c2870;--soft:#4a5590;--rule:#c3d0f2;--margin:#e2606c;--ok:#1d7a4a;--okbg:#dcf3e5;--ko:#b3261e;--kobg:#fde4e2;--btn:#1c2870;--btntxt:#fff;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--desk:#0f1430;--paper:#1a2150;--ink:#e7ebff;--soft:#a9b4ea;--rule:#2e3a7a;--margin:#e2606c;--ok:#7fe0a6;--okbg:#17402c;--ko:#ffa39b;--kobg:#4a1f22;--btn:#e7ebff;--btntxt:#1a2150;color-scheme:dark}}
+:root[data-theme="dark"]{--desk:#0f1430;--paper:#1a2150;--ink:#e7ebff;--soft:#a9b4ea;--rule:#2e3a7a;--ok:#7fe0a6;--okbg:#17402c;--ko:#ffa39b;--kobg:#4a1f22;--btn:#e7ebff;--btntxt:#1a2150;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--desk);color:var(--ink);font-family:'Nunito',system-ui,sans-serif;font-size:18px;line-height:1.45;min-height:100vh}
+main{max-width:640px;margin:0 auto;padding:16px}
+h1,h2{font-family:'Caveat Brush','Comic Sans MS',cursive;font-weight:400;letter-spacing:.01em;margin:0}
+h1{font-size:2.6rem;line-height:1}
+.sheet{background-color:var(--paper);background-image:repeating-linear-gradient(to bottom,transparent 0 31px,var(--rule) 31px 32px),linear-gradient(to right,transparent 46px,var(--margin) 46px 48px,transparent 48px);border-radius:6px;box-shadow:0 2px 0 rgba(0,0,0,.12);padding:20px 20px 20px 66px;margin-top:12px}
+.bar{display:flex;justify-content:space-between;font-weight:800;color:var(--soft);padding:4px 4px 0}
+.emoji{font-size:4rem;line-height:1.1}
+.q{font-weight:800;font-size:1.25rem;margin:8px 0 16px;min-height:3.8em}
+.choices{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.choices.three{grid-template-columns:1fr}
+button{font:inherit;font-weight:800;cursor:pointer;border:2px solid var(--btn);background:var(--btn);color:var(--btntxt);border-radius:10px;padding:14px 10px;min-height:56px}
+button.ghost{background:transparent;color:var(--btn)}
+button:focus-visible{outline:3px solid var(--margin);outline-offset:3px}
+button:disabled{cursor:default;opacity:.55}
+button.good{background:var(--okbg);color:var(--ok);border-color:var(--ok);opacity:1}
+button.bad{background:var(--kobg);color:var(--ko);border-color:var(--ko);opacity:1}
+.fb{margin-top:16px}
+.verdict{font-family:'Caveat Brush','Comic Sans MS',cursive;font-size:1.9rem}
+.verdict.ok{color:var(--ok)}.verdict.ko{color:var(--ko)}
+svg{width:100%;height:auto;max-height:110px;display:block;margin:6px 0}
+.trace{fill:none;stroke:var(--soft);stroke-width:2;stroke-dasharray:5 5}
+.dot{fill:var(--margin)}
+.fb button{width:100%;margin-top:10px}
+.grade{font-size:3.2rem;line-height:1.1}
+.score{font-family:'Caveat Brush','Comic Sans MS',cursive;font-size:3rem}
+p{margin:.4em 0}
+.hide{display:none}
+</style>
+</head>
+<body>
+<main>
+<h1>Droit ou en rond ?</h1>
+<div class="bar"><span id="pos"></span><span id="sc"></span></div>
+<section class="sheet" id="sheet" aria-live="polite"></section>
+</main>
+<script>
+var CARDS=[
+{e:"⛷️",t:"Le skieur sur une piste de vitesse (kilomètre lancé)",a:"r",x:"Il descend tout droit."},
+{e:"💉",t:"Le piston d'une seringue",a:"r",x:"Le bout du piston pousse en ligne droite."},
+{e:"🪂",t:"Le parachutiste (ou la bille dans une éprouvette d'huile) qui tombe verticalement",a:"r",x:"Il tombe tout droit."},
+{e:"🚆",t:"Un train sur une voie ferrée horizontale et droite",a:"r",x:"Il avance en ligne droite."},
+{e:"🏒",t:"Un palet de hockey qui glisse sur la glace sans frottement",a:"r",x:"Il file tout droit."},
+{e:"🎠",t:"L'enfant sur un manège (siège classique)",a:"c",x:"Il tourne en rond autour de l'axe central."},
+{e:"🌬️",t:"Un point à l'extrémité de la pale d'un ventilateur ou d'une éolienne",a:"c",x:"Le point tourne en cercle."},
+{e:"🎡",t:"Les nacelles d'une grande roue de fête foraine",a:"c",x:"Les nacelles décrivent des cercles."},
+{e:"🪨",t:"Une pierre attachée à une ficelle qu'on fait tourner au-dessus de sa tête",a:"c",x:"L'exemple classique : la pierre tourne en cercle."},
+{e:"⏱️",t:"L'extrémité de la trotteuse (l'aiguille des secondes) d'une montre",a:"c",x:"Le bout de l'aiguille décrit un cercle parfait."}
+];
+var BOSS={e:"🚲",t:"BOSS FINAL : la valve d'une roue de vélo qui roule, vue depuis le trottoir",x:"La trajectoire est une cycloïde : ni une droite, ni un cercle ! Vue depuis le vélo, la valve tournerait en cercle, mais vue du trottoir, elle se déplace en même temps."};
+var NAMES={r:"Rectiligne",c:"Circulaire",o:"Ni l'un ni l'autre"};
+var deck,i,score,sheet=document.getElementById("sheet"),pos=document.getElementById("pos"),sc=document.getElementById("sc");
+function $(h){sheet.innerHTML=h}
+function shuffle(a){a=a.slice();for(var k=a.length-1;k>0;k--){var j=Math.floor(Math.random()*(k+1));var t=a[k];a[k]=a[j];a[j]=t}return a}
+function reduced(){return window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches}
+function trace(k){
+var p;
+if(k==="r")p="M20 50 H280";
+else if(k==="c")p="M190 50 A40 40 0 1 1 110 50 A40 40 0 1 1 190 50";
+else{p="M30 80";for(var t=0;t<=12.57;t+=.3){p+=" L"+(30+14*(t-Math.sin(t))).toFixed(1)+" "+(80-14*(1-Math.cos(t))).toFixed(1)}}
+var dot=reduced()?"":'<circle class="dot" r="7"><animateMotion dur="3s" repeatCount="indefinite" path="'+p+'"/></circle>';
+return '<svg viewBox="0 0 300 100" role="img" aria-label="Trajectoire : '+NAMES[k]+'"><path class="trace" d="'+p+'"/>'+dot+'</svg>'}
+function start(){deck=shuffle(CARDS);i=0;score=0;show()}
+function intro(){pos.textContent="";sc.textContent="";
+$('<div class="emoji">🥾🚀🏆</div><h2>Quelle est la trajectoire ?</h2><p>10 cartes. Pour chacune, dis si le mouvement est <b>rectiligne</b> (en ligne droite) ou <b>circulaire</b> (en cercle). Atteindras-tu le grade d\'expert ?</p><div class="fb"><button id="go">Jouer</button></div>');
+document.getElementById("go").onclick=start}
+function show(){var c=deck[i];pos.textContent="Carte "+(i+1)+" / 10";sc.textContent="Score : "+score;
+$('<div class="emoji" aria-hidden="true">'+c.e+'</div><div class="q">'+c.t+'</div><div class="choices"><button data-a="r">➖ Rectiligne</button><button data-a="c">⭕ Circulaire</button></div><div class="fb" id="fb"></div>');
+Array.prototype.forEach.call(sheet.querySelectorAll("[data-a]"),function(b){b.onclick=function(){answer(b.dataset.a,c)}})}
+function answer(g,c){var ok=g===c.a;if(ok)score++;sc.textContent="Score : "+score;
+Array.prototype.forEach.call(sheet.querySelectorAll("[data-a]"),function(b){b.disabled=true;if(b.dataset.a===c.a)b.classList.add("good");else if(b.dataset.a===g)b.classList.add("bad")});
+var last=i===9;
+document.getElementById("fb").innerHTML='<div class="verdict '+(ok?"ok":"ko")+'">'+(ok?"Bravo !":"Raté !")+' '+NAMES[c.a]+'</div>'+trace(c.a)+'<p>'+c.x+'</p><button id="nx">'+(last?"Voir mon grade":"Carte suivante")+'</button>';
+var nx=document.getElementById("nx");nx.focus();nx.onclick=function(){if(last)end();else{i++;show()}}}
+function end(){pos.textContent="Terminé";
+var g=score>=9?["🏆","Expert absolu des trajectoires","Rien ne t'arrête, tu files droit au but et en cercle parfait !"]:score>=5?["🚀","Semi-expert de la piste","Pas mal du tout ! Tu commences à voir droit dans les virages."]:["🥾","Stagiaire en patins","Oups, la physique joue à cache-cache avec toi ! Retente ta chance."];
+$('<div class="grade">'+g[0]+'</div><h2>'+g[1]+'</h2><div class="score">'+score+' / 10</div><p>'+g[2]+'</p><div class="fb">'+(score>=9?'<button id="bs">Affronter le boss final 🚲</button>':'')+'<button class="ghost" id="rp">Rejouer</button></div>');
+if(score>=9)document.getElementById("bs").onclick=boss;
+document.getElementById("rp").onclick=start}
+function boss(){pos.textContent="Boss final";
+$('<div class="emoji" aria-hidden="true">'+BOSS.e+'</div><div class="q">'+BOSS.t+'</div><div class="choices three"><button data-a="r">➖ Rectiligne</button><button data-a="c">⭕ Circulaire</button><button data-a="o">🌀 Ni l\'un ni l\'autre</button></div><div class="fb" id="fb"></div>');
+Array.prototype.forEach.call(sheet.querySelectorAll("[data-a]"),function(b){b.onclick=function(){bossAnswer(b.dataset.a)}})}
+function bossAnswer(g){var ok=g==="o";
+Array.prototype.forEach.call(sheet.querySelectorAll("[data-a]"),function(b){b.disabled=true;if(b.dataset.a==="o")b.classList.add("good");else if(b.dataset.a===g)b.classList.add("bad")});
+document.getElementById("fb").innerHTML=(ok?'<div class="grade">👑</div><div class="verdict ok">Expert suprême des trajectoires !</div>':'<div class="verdict ko">Presque ! C\'était le piège.</div>')+trace("o")+'<p>'+BOSS.x+'</p><button id="rp">Rejouer</button>';
+document.getElementById("rp").onclick=start}
+intro();
+</script>
+</body>
+</html>
